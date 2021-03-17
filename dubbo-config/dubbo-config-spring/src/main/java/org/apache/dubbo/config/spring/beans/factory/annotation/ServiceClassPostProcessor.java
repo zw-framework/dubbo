@@ -126,6 +126,8 @@ public class ServiceClassPostProcessor implements BeanDefinitionRegistryPostProc
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
 
         // @since 2.7.5
+        // 注册Dubbo服务监听的beanDefinition
+        // DubboBootstrapApplicationListener监听：在Bean注册后，发布Dubbo服务
         registerInfrastructureBean(registry, DubboBootstrapApplicationListener.BEAN_NAME, DubboBootstrapApplicationListener.class);
 
         Set<String> resolvedPackagesToScan = resolvePackagesToScan(packagesToScan);
@@ -289,6 +291,8 @@ public class ServiceClassPostProcessor implements BeanDefinitionRegistryPostProc
 
         String annotatedServiceBeanName = beanDefinitionHolder.getBeanName();
 
+        // 创建ServiceBean类型的BeanDefinition。将@DubboService注解数据设置到ServiceBean中
+        // 即，服务注册的Bean(@DubboService注解Bean)
         AbstractBeanDefinition serviceBeanDefinition =
                 buildServiceBeanDefinition(service, serviceAnnotationAttributes, interfaceClass, annotatedServiceBeanName);
 
@@ -296,6 +300,7 @@ public class ServiceClassPostProcessor implements BeanDefinitionRegistryPostProc
         String beanName = generateServiceBeanName(serviceAnnotationAttributes, interfaceClass);
 
         if (scanner.checkCandidate(beanName, serviceBeanDefinition)) { // check duplicated candidate bean
+            // 注册serviceBean类型的BeanDefinition
             registry.registerBeanDefinition(beanName, serviceBeanDefinition);
 
             if (logger.isInfoEnabled()) {
@@ -374,6 +379,7 @@ public class ServiceClassPostProcessor implements BeanDefinitionRegistryPostProc
     }
 
     /**
+     * 创建ServiceBean类型的BeanDefinition。将@DubboService注解中的属性设置到ServiceBean中
      * Build the {@link AbstractBeanDefinition Bean Definition}
      *
      * @param serviceAnnotation

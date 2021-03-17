@@ -116,12 +116,14 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
      */
     private static final ScheduledExecutorService DELAY_EXPORT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("DubboServiceDelayExporter", true));
 
+    // PROTOCOL -> Protocol$Adaptive
     private static final Protocol PROTOCOL = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
 
     /**
      * A {@link ProxyFactory} implementation that will generate a exported service proxy,the JavassistProxyFactory is its
      * default implementation
      */
+    // ProxyFactory -> PROXY_FACTORY$Adaptive
     private static final ProxyFactory PROXY_FACTORY = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
 
     /**
@@ -198,6 +200,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         }
 
         if (shouldDelay()) {
+            // 延迟发布
             DELAY_EXPORT_EXECUTOR.schedule(this::doExport, getDelay(), TimeUnit.MILLISECONDS);
         } else {
             doExport();
@@ -315,16 +318,27 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                 serviceMetadata
         );
 
+        // 获取注册中心相关URL信息
+        // registry://192.168.120.100:2181/org.apache.dubbo.registry.RegistryService?
+        // application=dubbo-demo-annotation-provider&dubbo=2.0.2&id=registryConfig&pid=19868&registry=zookeeper&timestamp=1615890375161
         List<URL> registryURLs = ConfigValidationUtils.loadRegistries(this, true);
 
+        // 根据协议类型，发布到不同注册中心
+        //ProtocolConfig为配置文件中dubbo.protocol属性相关信息
+        //ProtocolConfig{name='dubbo', host='null', port=20880, contextpath='null',sslEnabled=null}
         for (ProtocolConfig protocolConfig : protocols) {
             String pathKey = URL.buildKey(getContextPath(protocolConfig)
                     .map(p -> p + "/" + path)
                     .orElse(path), group, version);
+
+            // pathKey：org.apache.dubbo.demo.DemoService
+            // interfaceClass：org.apache.dubbo.demo.DemoService
+
             // In case user specified path, register service one more time to map it to path.
             repository.registerService(pathKey, interfaceClass);
             // TODO, uncomment this line once service key is unified
             serviceMetadata.setServiceKey(pathKey);
+            // 拼接要注册的URL数据
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
     }
@@ -332,7 +346,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
         String name = protocolConfig.getName();
         if (StringUtils.isEmpty(name)) {
-            name = DUBBO;
+            name = DUBBO;  //默认使用DUBBO协议
         }
 
         Map<String, String> map = new HashMap<String, String>();
@@ -407,7 +421,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
             } // end of methods for
         }
 
-        if (ProtocolUtils.isGeneric(generic)) {
+        if (ProtocolUtils.isGeneric(generic)) {  //泛化
             map.put(GENERIC_KEY, generic);
             map.put(METHODS_KEY, ANY_VALUE);
         } else {
@@ -450,6 +464,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         // You can customize Configurator to append extra parameters
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
                 .hasExtension(url.getProtocol())) {
+            //扩展点
             url = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
                     .getExtension(url.getProtocol()).getConfigurator(url).configure(url);
         }
@@ -492,6 +507,8 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                         Invoker<?> invoker = PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(EXPORT_KEY, url.toFullString()));
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
 
+                        //使用扩展点发布Dubbo服务到注册中心
+                        // PROTOCOL -> Protocol$Adaptive
                         Exporter<?> exporter = PROTOCOL.export(wrapperInvoker);
                         exporters.add(exporter);
                     }
@@ -509,6 +526,13 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                 MetadataUtils.publishServiceDefinition(url);
             }
         }
+        /*
+        url为：
+        dubbo://192.168.2.1:20880/org.apache.dubbo.demo.DemoService?
+        anyhost=true&application=dubbo-demo-annotation-provider&bind.ip=192.168.2.1&bind.port=20880&
+        deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=org.apache.dubbo.demo.DemoService&
+        methods=sayHello,sayHelloAsync&pid=21492&release=&side=provider&timestamp=1615890764061
+         */
         this.urls.add(url);
     }
 
