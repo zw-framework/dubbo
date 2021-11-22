@@ -47,6 +47,7 @@ import static org.apache.dubbo.config.spring.beans.factory.annotation.ServiceBea
 import static org.springframework.util.StringUtils.hasText;
 
 /**
+ * 处理服务发现相关注解：DubboReference、Reference、
  * {@link org.springframework.beans.factory.config.BeanPostProcessor} implementation
  * that Consumer service {@link Reference} annotated fields
  *
@@ -118,26 +119,36 @@ public class ReferenceAnnotationBeanPostProcessor extends AbstractAnnotationBean
         return Collections.unmodifiableMap(injectedMethodReferenceBeanCache);
     }
 
+    /**
+     * 获取依赖的Bean
+     * @param attributes
+     * @param bean
+     * @param beanName
+     * @param injectedType
+     * @param injectedElement
+     * @return
+     * @throws Exception
+     */
     @Override
     protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType,
                                        InjectionMetadata.InjectedElement injectedElement) throws Exception {
         /**
          * The name of bean that annotated Dubbo's {@link Service @Service} in local Spring {@link ApplicationContext}
          */
-        String referencedBeanName = buildReferencedBeanName(attributes, injectedType);
+        String referencedBeanName = buildReferencedBeanName(attributes, injectedType); //ServiceBean:org.apache.dubbo.demo.DemoService
 
         /**
          * The name of bean that is declared by {@link Reference @Reference} annotation injection
          */
-        String referenceBeanName = getReferenceBeanName(attributes, injectedType);
+        String referenceBeanName = getReferenceBeanName(attributes, injectedType);  //@Reference org.apache.dubbo.demo.DemoService
 
-        ReferenceBean referenceBean = buildReferenceBeanIfAbsent(referenceBeanName, attributes, injectedType);
+        ReferenceBean referenceBean = buildReferenceBeanIfAbsent(referenceBeanName, attributes, injectedType);  //消费者Bean。(ServerBean,生产者Bean)
 
         boolean localServiceBean = isLocalServiceBean(referencedBeanName, referenceBean, attributes);
 
         prepareReferenceBean(referencedBeanName, referenceBean, localServiceBean);
 
-        registerReferenceBean(referencedBeanName, referenceBean, attributes, localServiceBean, injectedType);
+        registerReferenceBean(referencedBeanName, referenceBean, attributes, localServiceBean, injectedType);  //注册referenceBean
 
         cacheInjectedReferenceBean(referenceBean, injectedElement);
 

@@ -116,14 +116,14 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
      */
     private static final ScheduledExecutorService DELAY_EXPORT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("DubboServiceDelayExporter", true));
 
-    // PROTOCOL -> Protocol$Adaptive
+    // 自适应扩展点. public class Protocol$Adaptive implements org.apache.dubbo.rpc.Protocol {}     默认使用dubbo扩展点
     private static final Protocol PROTOCOL = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
 
     /**
      * A {@link ProxyFactory} implementation that will generate a exported service proxy,the JavassistProxyFactory is its
      * default implementation
      */
-    // ProxyFactory -> PROXY_FACTORY$Adaptive
+    // ProxyFactory -> PROXY_FACTORY$Adaptive.   默认使用javassist扩展点
     private static final ProxyFactory PROXY_FACTORY = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
 
     /**
@@ -139,7 +139,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
     private DubboBootstrap bootstrap;
 
     /**
-     * The exported services
+     * The exported services  缓存暴露的服务代理对象。当服务被调用时，通过该代理对象调用真正的服务实例。
      */
     private final List<Exporter<?>> exporters = new ArrayList<Exporter<?>>();
 
@@ -469,13 +469,14 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                     .getExtension(url.getProtocol()).getConfigurator(url).configure(url);
         }
 
+        // 指定服务发布范围。remote(远程)、local(本地)、none(不发布)、null(同时发布到本地和远程)
         String scope = url.getParameter(SCOPE_KEY);
         // don't export when none is configured
         if (!SCOPE_NONE.equalsIgnoreCase(scope)) {
 
             // export to local if the config is not remote (export to remote only when config is remote)
             if (!SCOPE_REMOTE.equalsIgnoreCase(scope)) {
-                exportLocal(url);
+                exportLocal(url);  //发布服务到本地
             }
             // export to remote if the config is not local (export to local only when config is local)
             if (!SCOPE_LOCAL.equalsIgnoreCase(scope)) {
@@ -487,7 +488,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                         }
                         url = url.addParameterIfAbsent(DYNAMIC_KEY, registryURL.getParameter(DYNAMIC_KEY));
                         URL monitorUrl = ConfigValidationUtils.loadMonitor(this, registryURL);
-                        if (monitorUrl != null) {
+                        if (monitorUrl != null) {   //监控url
                             url = url.addParameterAndEncoded(MONITOR_KEY, monitorUrl.toFullString());
                         }
                         if (logger.isInfoEnabled()) {
@@ -503,14 +504,29 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                         if (StringUtils.isNotEmpty(proxy)) {
                             registryURL = registryURL.addParameter(PROXY_KEY, proxy);
                         }
-
+                        //url -> 
+                        // dubbo://192.168.2.1:20880/org.apache.dubbo.demo.DemoService?
+                        // anyhost=true&application=dubbo-demo-annotation-provider&bind.ip=192.168.2.1&bind.port=20880
+                        // &deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=org.apache.dubbo.demo.DemoService
+                        // &methods=sayHello,sayHelloAsync&pid=1360&release=&side=provider&timestamp=1616044809245
+                        
+                        // registryURL -> 
+                        // registry://192.168.120.100:2181/org.apache.dubbo.registry.RegistryService?application=dubbo-demo-annotation-provider&dubbo=2.0.2
+                        // &export=
+                        // dubbo://192.168.2.1:20880/org.apache.dubbo.demo.DemoService?
+                        // anyhost=true&application=dubbo-demo-annotation-provider&bind.ip=192.168.2.1&bind.port=20880
+                        // &deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=org.apache.dubbo.demo.DemoService
+                        // &methods=sayHello%2CsayHelloAsync&pid=1360&release=&side=provider&timestamp=1616044809245
+                        // &id=registryConfig&pid=1360&registry=zookeeper&timeout=10000&timestamp=1616044808310
                         Invoker<?> invoker = PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(EXPORT_KEY, url.toFullString()));
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
 
+                        //发布服务到远程.   服务发布Protocol协议类型为registry -> InterfaceCompatibleRegistryProtocol
                         //使用扩展点发布Dubbo服务到注册中心
                         // PROTOCOL -> Protocol$Adaptive
+                        // 调用顺序为：Protocol$Adaptive -> ProtocolFilterWrapper -> ProtocolListenerWrapper -> InterfaceCompatibleRegistryProtocol -> RegistryProtocol
                         Exporter<?> exporter = PROTOCOL.export(wrapperInvoker);
-                        exporters.add(exporter);
+                        exporters.add(exporter);  //缓存发布的服务代理对象(Exporter->Invoker)。当服务被调用时，通过该代理对象进行访问。
                     }
                 } else {
                     if (logger.isInfoEnabled()) {
@@ -538,7 +554,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     /**
-     * always export injvm
+     * always export injvm。 使用InjvmProtocol扩展点，将服务发布到本地。
      */
     private void exportLocal(URL url) {
         URL local = URLBuilder.from(url)
@@ -546,8 +562,11 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                 .setHost(LOCALHOST_VALUE)
                 .setPort(0)
                 .build();
+        // PROXY_FACTORY.getInvoker()返回一个Invoker动态代理对象
+        //1) 调用Protocol$Adaptive代理对象的export(Invoker)方法
+        //2) 此处根据URL的protocol参数决定调用InjvmProtocol的export(Invoker)方法
         Exporter<?> exporter = PROTOCOL.export(
-                PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, local));
+                PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, local));   //发布服务
         exporters.add(exporter);
         logger.info("Export dubbo service " + interfaceClass.getName() + " to local registry url : " + local);
     }

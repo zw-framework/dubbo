@@ -53,7 +53,9 @@ public class ListenerRegistryWrapper implements Registry {
 
     @Override
     public void register(URL url) {
-        try {
+        try {    //注册(生产者或消费者)
+            // 1) 注册dubbo服务：dubbo://192.168.2.1:20880/org.apache.dubbo.demo.DemoService?anyhost=true&application=dubbo-demo-annotation-provider&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=org.apache.dubbo.demo.DemoService&methods=sayHello,sayHelloAsync&pid=14672&release=&side=provider&timestamp=1616054032021
+            // 2) 注册消费者：consumer://192.168.20.1/org.apache.dubbo.demo.DemoService?application=dubbo-demo-annotation-consumer&category=consumers&check=false&dubbo=2.0.2&init=false&interface=org.apache.dubbo.demo.DemoService&methods=sayHello,sayHelloAsync&pid=22536&side=consumer&sticky=false&timestamp=1617279346018
             registry.register(url);
         } finally {
             if (CollectionUtils.isNotEmpty(listeners)) {

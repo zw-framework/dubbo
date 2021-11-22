@@ -25,12 +25,12 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * AdaptiveExtensionFactory
+ * AdaptiveExtensionFactory：ExtensionFactory的激活扩展点
  */
 @Adaptive
 public class AdaptiveExtensionFactory implements ExtensionFactory {
 
-    private final List<ExtensionFactory> factories;
+    private final List<ExtensionFactory> factories;   //缓存ExtensionFactory扩展点文件中配置的扩展点实例对象。如SpiExtensionFactory扩展点
 
     public AdaptiveExtensionFactory() {
         ExtensionLoader<ExtensionFactory> loader = ExtensionLoader.getExtensionLoader(ExtensionFactory.class);

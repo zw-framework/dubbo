@@ -98,7 +98,7 @@ class URL implements Serializable {
 
     private static final long serialVersionUID = -1985165475234910535L;
 
-    protected String protocol;
+    protected String protocol;  //protocol协议类型。如：dubbo、registry等。 protocol扩展点通过该值查找
 
     protected String username;
 

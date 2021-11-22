@@ -212,7 +212,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                     && url.getParameter(Constants.CHECK_KEY, true)
                     && !CONSUMER_PROTOCOL.equals(url.getProtocol());
             boolean skipFailback = t instanceof SkipFailbackWrapperException;
-            if (check || skipFailback) {
+            if (check || skipFailback) {  // 注册服务时，如果check参数为true，注册失败则抛出异常
                 if (skipFailback) {
                     t = t.getCause();
                 }
@@ -221,7 +221,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 logger.error("Failed to register " + url + ", waiting for retry, cause: " + t.getMessage(), t);
             }
 
-            // Record a failed registration request to a failed list, retry regularly
+            // Record a failed registration request to a failed list, retry regularly   注册失败，进行重试
             addFailedRegistered(url);
         }
     }

@@ -46,10 +46,11 @@ public abstract class AbstractProtocol implements Protocol {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    // 服务名称与服务实例对应关系。 如：key为org.apache.dubbo.demo.DemoService:20880
     protected final Map<String, Exporter<?>> exporterMap = new ConcurrentHashMap<String, Exporter<?>>();
 
     /**
-     * <host:port, ProtocolServer>
+     * <host:port(192.168.2.1:20880), ProtocolServer>  一个应用不管有多少Dubbo服务，只启动一个ProtocolServer
      */
     protected final Map<String, ProtocolServer> serverMap = new ConcurrentHashMap<>();
 

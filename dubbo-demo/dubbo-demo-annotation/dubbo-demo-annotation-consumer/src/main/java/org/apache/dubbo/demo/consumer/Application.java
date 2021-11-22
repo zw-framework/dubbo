@@ -25,17 +25,44 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Application {
+
+    private List<String> aspectBeanNames;
+
     /**
      * In order to make sure multicast registry works, need to specify '-Djava.net.preferIPv4Stack=true' before
      * launch the application
      */
     public static void main(String[] args) {
-        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ConsumerConfiguration.class);
-        context.start();
-        DemoService service = context.getBean("demoServiceComponent", DemoServiceComponent.class);
-        String hello = service.sayHello("world");
-        System.out.println("result :" + hello);
+        Application application = new Application();
+        application.aspectBeanNames = new ArrayList<>();
+        List<String> aspectNames = application.aspectBeanNames;
+        aspectNames.add("aaa");
+        System.out.println(aspectNames.size());
+
+        Thread thread = new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+                System.out.println(application.aspectBeanNames.size());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        thread.start();
+        aspectNames.add("ccc");
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+//        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ConsumerConfiguration.class);
+//        context.start();
+//        DemoService service = context.getBean("demoServiceComponent", DemoServiceComponent.class);
+//        String hello = service.sayHello("world");
+//        System.out.println("result :" + hello);
     }
 
     @Configuration

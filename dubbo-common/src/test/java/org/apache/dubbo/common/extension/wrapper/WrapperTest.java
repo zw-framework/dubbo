@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * {@link org.apache.dubbo.common.extension.Wrapper} Test
  *
+ * Wapper包装测试
  * @since 2.7.5
  */
 public class WrapperTest {
@@ -33,6 +34,7 @@ public class WrapperTest {
     @Test
     public void testWrapper() {
         Demo demoWrapper = ExtensionLoader.getExtensionLoader(Demo.class).getExtension("demo");
+        System.out.println(demoWrapper);
         assertTrue(demoWrapper instanceof DemoWrapper);
         Demo demoWrapper2 = ExtensionLoader.getExtensionLoader(Demo.class).getExtension("demo2");
         assertTrue(demoWrapper2 instanceof DemoWrapper2);

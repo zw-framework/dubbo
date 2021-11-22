@@ -226,7 +226,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         dispatch(new ReferenceConfigDestroyedEvent(this));
     }
 
-    public synchronized void init() {
+    public synchronized void init() {   //初始化服务消费者
         if (initialized) {
             return;
         }
@@ -302,7 +302,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
         serviceMetadata.getAttachments().putAll(map);
 
-        ref = createProxy(map);
+        ref = createProxy(map);  // 创建消费者动态代理对象
 
         serviceMetadata.setTarget(ref);
         serviceMetadata.addAttribute(PROXY_CLASS_REF, ref);
@@ -314,12 +314,19 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
         checkInvokerAvailable();
 
+        /*
+            map =
+                {
+                    init=false, side=consumer, application=dubbo-demo-annotation-consumer, release=,
+                    methods=sayHello,sayHelloAsync, sticky=false, dubbo=2.0.2, pid=22536, interface=org.apache.dubbo.demo.DemoService, timestamp=1617279346018
+                }
+         */
         // dispatch a ReferenceConfigInitializedEvent since 2.7.4
-        dispatch(new ReferenceConfigInitializedEvent(this, invoker));
+        dispatch(new ReferenceConfigInitializedEvent(this, invoker));   //发布消费者代理创建成功的事件
     }
 
     @SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
-    private T createProxy(Map<String, String> map) {
+    private T createProxy(Map<String, String> map) {  //创建消费者动态代理对象。(多注册中心，服务地址，远程连接调用方式等)
         if (shouldJvmRefer(map)) {
             URL url = new URL(LOCAL_PROTOCOL, LOCALHOST_VALUE, 0, interfaceClass.getName()).addParameters(map);
             invoker = REF_PROTOCOL.refer(interfaceClass, url);
@@ -363,8 +370,8 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
                 }
             }
 
-            if (urls.size() == 1) {
-                invoker = REF_PROTOCOL.refer(interfaceClass, urls.get(0));
+            if (urls.size() == 1) {  // registry://192.168.120.100:2181/org.apache.dubbo.registry.RegistryService?application=dubbo-demo-annotation-consumer&dubbo=2.0.2&id=org.apache.dubbo.config.RegistryConfig#0&pid=22536&refer=application%3Ddubbo-demo-annotation-consumer%26dubbo%3D2.0.2%26init%3Dfalse%26interface%3Dorg.apache.dubbo.demo.DemoService%26methods%3DsayHello%2CsayHelloAsync%26pid%3D22536%26register.ip%3D192.168.20.1%26side%3Dconsumer%26sticky%3Dfalse%26timestamp%3D1617279346018&registry=zookeeper&timestamp=1617279378339
+                invoker = REF_PROTOCOL.refer(interfaceClass, urls.get(0));  // 注册服务消费者
             } else {
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();
                 URL registryURL = null;
