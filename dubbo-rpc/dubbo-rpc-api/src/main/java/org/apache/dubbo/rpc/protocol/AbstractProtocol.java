@@ -46,11 +46,11 @@ public abstract class AbstractProtocol implements Protocol {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-    // æœåŠ¡åç§°ä¸æœåŠ¡å®ä¾‹å¯¹åº”å…³ç³»ã€‚ å¦‚ï¼škeyä¸ºorg.apache.dubbo.demo.DemoService:20880
-    protected final Map<String, Exporter<?>> exporterMap = new ConcurrentHashMap<String, Exporter<?>>();
+    // ·şÎñÃû³ÆÓë·şÎñÊµÀı¶ÔÓ¦¹ØÏµ¡£ Èç£ºkeyÎªorg.apache.dubbo.demo.DemoService:20880
+    protected final DelegateExporterMap exporterMap = new DelegateExporterMap();
 
     /**
-     * <host:port(192.168.2.1:20880), ProtocolServer>  ä¸€ä¸ªåº”ç”¨ä¸ç®¡æœ‰å¤šå°‘DubboæœåŠ¡ï¼Œåªå¯åŠ¨ä¸€ä¸ªProtocolServer
+     * <host:port(192.168.2.1:20880), ProtocolServer>  Ò»¸öÓ¦ÓÃ²»¹ÜÓĞ¶àÉÙDubbo·şÎñ£¬Ö»Æô¶¯Ò»¸öProtocolServer
      */
     protected final Map<String, ProtocolServer> serverMap = new ConcurrentHashMap<>();
 
@@ -66,6 +66,7 @@ public abstract class AbstractProtocol implements Protocol {
         return ProtocolUtils.serviceKey(port, serviceName, serviceVersion, serviceGroup);
     }
 
+    @Override
     public List<ProtocolServer> getServers() {
         return Collections.unmodifiableList(new ArrayList<>(serverMap.values()));
     }
@@ -85,14 +86,13 @@ public abstract class AbstractProtocol implements Protocol {
                 }
             }
         }
-        for (String key : new ArrayList<String>(exporterMap.keySet())) {
-            Exporter<?> exporter = exporterMap.remove(key);
-            if (exporter != null) {
+        for (Map.Entry<String, Exporter<?>> item : exporterMap.getExporterMap().entrySet()) {
+            if (exporterMap.removeExportMap(item.getKey(), item.getValue())) {
                 try {
                     if (logger.isInfoEnabled()) {
-                        logger.info("Unexport service: " + exporter.getInvoker().getUrl());
+                        logger.info("Unexport service: " + item.getValue().getInvoker().getUrl());
                     }
-                    exporter.unexport();
+                    item.getValue().unexport();
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);
                 }
@@ -108,10 +108,10 @@ public abstract class AbstractProtocol implements Protocol {
     protected abstract <T> Invoker<T> protocolBindingRefer(Class<T> type, URL url) throws RpcException;
 
     public Map<String, Exporter<?>> getExporterMap() {
-        return exporterMap;
+        return exporterMap.getExporterMap();
     }
 
     public Collection<Exporter<?>> getExporters() {
-        return Collections.unmodifiableCollection(exporterMap.values());
+        return exporterMap.getExporters();
     }
 }

@@ -17,6 +17,7 @@
 package org.apache.dubbo.rpc;
 
 
+import org.apache.dubbo.common.utils.MapUtils;
 import org.apache.dubbo.rpc.proxy.InvokerInvocationHandler;
 
 import java.util.HashMap;
@@ -45,7 +46,7 @@ import static org.apache.dubbo.rpc.Constants.INVOCATION_KEY;
  *  }
  * </pre>
  * AsyncRpcResult is a future representing an unfinished RPC call, while AppResponse is the actual return type of this call.
- * In theory, AppResponse does'n have to implement the {@link Result} interface, this is done mainly for compatibility purpose.
+ * In theory, AppResponse doesn't have to implement the {@link Result} interface, this is done mainly for compatibility purpose.
  *
  * @serial Do not change the class name and properties.
  */
@@ -121,7 +122,7 @@ public class AppResponse implements Result {
     @Override
     @Deprecated
     public Map<String, String> getAttachments() {
-        return new AttachmentsAdapter.ObjectToStringMap(attachments);
+        return MapUtils.objectToStringMap(attachments);
     }
 
     @Override

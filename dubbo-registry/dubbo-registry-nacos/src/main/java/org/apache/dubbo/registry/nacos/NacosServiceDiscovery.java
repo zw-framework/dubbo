@@ -27,10 +27,10 @@ import org.apache.dubbo.registry.client.event.listener.ServiceInstancesChangedLi
 import org.apache.dubbo.registry.nacos.util.NacosNamingServiceUtils;
 
 import com.alibaba.nacos.api.exception.NacosException;
-import com.alibaba.nacos.api.naming.NamingService;
 import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.alibaba.nacos.api.naming.pojo.Instance;
 import com.alibaba.nacos.api.naming.pojo.ListView;
+import com.alibaba.nacos.api.naming.utils.NamingUtils;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -55,7 +55,7 @@ public class NacosServiceDiscovery extends AbstractServiceDiscovery {
 
     private String group;
 
-    private NamingService namingService;
+    private NacosNamingServiceWrapper namingService;
 
     private URL registryURL;
 
@@ -140,7 +140,7 @@ public class NacosServiceDiscovery extends AbstractServiceDiscovery {
     }
 
     private void handleEvent(NamingEvent event, ServiceInstancesChangedListener listener) {
-        String serviceName = event.getServiceName();
+        String serviceName = NamingUtils.getServiceName(event.getServiceName());
         List<ServiceInstance> serviceInstances = event.getInstances()
                 .stream()
                 .map(NacosNamingServiceUtils::toServiceInstance)
