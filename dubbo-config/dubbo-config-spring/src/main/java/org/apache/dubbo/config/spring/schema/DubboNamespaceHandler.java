@@ -54,6 +54,7 @@ public class DubboNamespaceHandler extends NamespaceHandlerSupport implements Co
 
     @Override
     public void init() {
+        // 向parsers集合注册解析类。key为元素的LocalName；value为解析对象
         registerBeanDefinitionParser("application", new DubboBeanDefinitionParser(ApplicationConfig.class, true));
         registerBeanDefinitionParser("module", new DubboBeanDefinitionParser(ModuleConfig.class, true));
         registerBeanDefinitionParser("registry", new DubboBeanDefinitionParser(RegistryConfig.class, true));
@@ -87,6 +88,7 @@ public class DubboNamespaceHandler extends NamespaceHandlerSupport implements Co
          * issue : https://github.com/apache/dubbo/issues/6275
          */
         registerCommonBeans(registry);
+        // 根据元素的LocalName，从parsers集合获取对应的BeanDefinition解析器，获取BeanDefinition
         BeanDefinition beanDefinition = super.parse(element, parserContext);
         setSource(beanDefinition);
         return beanDefinition;
