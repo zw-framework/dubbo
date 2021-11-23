@@ -16,18 +16,18 @@
  */
 package org.apache.dubbo.rpc.protocol.tri;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
 public class TripleClientInboundHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        final ClientStream invoker = TripleUtil.getClientStream(ctx);
-        final ByteBuf buffer = (ByteBuf) msg;
-        if (invoker != null) {
-            invoker.onData(new ByteBufInputStream(buffer, buffer.readableBytes(),true));
+        final AbstractClientStream clientStream = ctx.channel().attr(TripleConstant.CLIENT_STREAM_KEY).get();
+
+        final byte[] data = (byte[]) msg;
+        if (clientStream != null) {
+            clientStream.inboundTransportObserver()
+                .onData(data, false);
         }
     }
 }

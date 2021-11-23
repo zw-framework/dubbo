@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableSet;
@@ -39,28 +40,25 @@ import static java.util.Collections.unmodifiableSet;
  */
 public class CollectionUtils {
 
-    private static final Comparator<String> SIMPLE_NAME_COMPARATOR = new Comparator<String>() {
-        @Override
-        public int compare(String s1, String s2) {
-            if (s1 == null && s2 == null) {
-                return 0;
-            }
-            if (s1 == null) {
-                return -1;
-            }
-            if (s2 == null) {
-                return 1;
-            }
-            int i1 = s1.lastIndexOf('.');
-            if (i1 >= 0) {
-                s1 = s1.substring(i1 + 1);
-            }
-            int i2 = s2.lastIndexOf('.');
-            if (i2 >= 0) {
-                s2 = s2.substring(i2 + 1);
-            }
-            return s1.compareToIgnoreCase(s2);
+    private static final Comparator<String> SIMPLE_NAME_COMPARATOR = (s1, s2) -> {
+        if (s1 == null && s2 == null) {
+            return 0;
         }
+        if (s1 == null) {
+            return -1;
+        }
+        if (s2 == null) {
+            return 1;
+        }
+        int i1 = s1.lastIndexOf('.');
+        if (i1 >= 0) {
+            s1 = s1.substring(i1 + 1);
+        }
+        int i2 = s2.lastIndexOf('.');
+        if (i2 >= 0) {
+            s2 = s2.substring(i2 + 1);
+        }
+        return s1.compareToIgnoreCase(s2);
     };
 
     private CollectionUtils() {
@@ -79,6 +77,27 @@ public class CollectionUtils {
             Collections.sort(list, SIMPLE_NAME_COMPARATOR);
         }
         return list;
+    }
+
+    /**
+     * Flip the specified {@link Map}
+     *
+     * @param map The specified {@link Map},Its value must be unique
+     * @param <K> The key type of specified {@link Map}
+     * @param <V> The value type of specified {@link Map}
+     * @return {@link Map}
+     */
+    public static <K, V> Map<V, K> flip(Map<K, V> map) {
+        if (isEmptyMap(map)) {
+            return (Map<V, K>) map;
+        }
+        Set<V> set = map.values().stream().collect(Collectors.toSet());
+        if (set.size() != map.size()) {
+            throw new IllegalArgumentException("The map value must be unique.");
+        }
+        return map.entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
     }
 
     public static Map<String, Map<String, String>> splitAll(Map<String, List<String>> list, String separator) {
@@ -324,9 +343,7 @@ public class CollectionUtils {
 
         try {
             return one.containsAll(another);
-        } catch (ClassCastException unused) {
-            return false;
-        } catch (NullPointerException unused) {
+        } catch (ClassCastException | NullPointerException unused) {
             return false;
         }
     }

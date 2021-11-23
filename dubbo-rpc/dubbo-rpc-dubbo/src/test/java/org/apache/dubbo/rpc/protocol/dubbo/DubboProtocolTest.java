@@ -64,12 +64,12 @@ public class DubboProtocolTest {
     @AfterAll
     public static void after() {
         ProtocolUtils.closeAll();
-        ApplicationModel.getServiceRepository().unregisterService(DemoService.class);
+        ApplicationModel.defaultModel().getDefaultModule().getServiceRepository().unregisterService(DemoService.class);
     }
 
     @BeforeAll
     public static void setup() {
-        ApplicationModel.getServiceRepository().registerService(DemoService.class);
+        ApplicationModel.defaultModel().getDefaultModule().getServiceRepository().registerService(DemoService.class);
     }
 
     @Test
@@ -165,7 +165,7 @@ public class DubboProtocolTest {
 
         RemoteService remote = new RemoteServiceImpl();
 
-        ApplicationModel.getServiceRepository().registerService(RemoteService.class);
+        ApplicationModel.defaultModel().getDefaultModule().getServiceRepository().registerService(RemoteService.class);
 
         int port = NetUtils.getAvailablePort();
         protocol.export(proxy.getInvoker(remote, RemoteService.class, URL.valueOf("dubbo://127.0.0.1:" + port + "/" + RemoteService.class.getName())));
@@ -179,8 +179,8 @@ public class DubboProtocolTest {
         assertEquals("hello world@" + RemoteServiceImpl.class.getName(), remote.sayHello("world"));
 
 //       can't find target service addresses
-        EchoService remoteEecho = (EchoService) remote;
-        assertEquals(remoteEecho.$echo("ok"), "ok");
+        EchoService remoteEcho = (EchoService) remote;
+        assertEquals(remoteEcho.$echo("ok"), "ok");
     }
 
     @Test
@@ -191,7 +191,7 @@ public class DubboProtocolTest {
         service = proxy.getProxy(protocol.refer(DemoService.class, URL.valueOf("dubbo://127.0.0.1:" + port + "/" + DemoService.class.getName() + "?codec=exchange").addParameter("timeout",
                 3000L)));
         long start = System.currentTimeMillis();
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 100; i++)
             service.getSize(new String[]{"", "", ""});
         System.out.println("take:" + (System.currentTimeMillis() - start));
     }
@@ -243,9 +243,27 @@ public class DubboProtocolTest {
         Mockito.when(dic.getConsumerUrl()).thenReturn(url);
 
         FailfastCluster cluster = new FailfastCluster();
-        Invoker<DemoService> clusterInvoker = cluster.join(dic);
+        Invoker<DemoService> clusterInvoker = cluster.join(dic, true);
         Result result = clusterInvoker.invoke(invocation);
         Thread.sleep(10);
         assertEquals(result.getValue(), "consumer");
+    }
+
+    @Test
+    public void testPayloadOverException() throws Exception {
+        DemoService service = new DemoServiceImpl();
+        int port = NetUtils.getAvailablePort();
+        protocol.export(proxy.getInvoker(service, DemoService.class,
+                URL.valueOf("dubbo://127.0.0.1:" + port + "/" + DemoService.class.getName()).addParameter("payload", 10 * 1024)));
+        service = proxy.getProxy(protocol.refer(DemoService.class,
+                URL.valueOf("dubbo://127.0.0.1:" + port + "/" + DemoService.class.getName()).addParameter("timeout",
+                        6000L).addParameter("payload", 160)));
+        try {
+            service.download(300);
+            Assertions.fail();
+        } catch (Exception expected) {
+            Assertions.assertTrue(expected.getMessage().contains("Data length too large"));
+        }
+
     }
 }

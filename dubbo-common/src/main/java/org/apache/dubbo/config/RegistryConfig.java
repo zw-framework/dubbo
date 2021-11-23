@@ -30,7 +30,6 @@ import static org.apache.dubbo.common.constants.RegistryConstants.REGISTRY_PUBLI
 import static org.apache.dubbo.common.constants.RegistryConstants.REGISTRY_PUBLISH_INTERFACE_KEY;
 import static org.apache.dubbo.common.constants.RemotingConstants.BACKUP_KEY;
 import static org.apache.dubbo.common.utils.PojoUtils.updatePropertyIfAbsent;
-import static org.apache.dubbo.config.Constants.REGISTRIES_SUFFIX;
 
 /**
  * RegistryConfig
@@ -140,11 +139,6 @@ public class RegistryConfig extends AbstractConfig {
     private Map<String, String> parameters;
 
     /**
-     * Whether it's default
-     */
-    private Boolean isDefault;
-
-    /**
      * Simple the registry. both useful for provider and consumer
      *
      * @since 2.7.0
@@ -213,7 +207,6 @@ public class RegistryConfig extends AbstractConfig {
 
     public void setProtocol(String protocol) {
         this.protocol = protocol;
-//        this.updateIdIfAbsent(protocol);
     }
 
     @Parameter(excluded = true)
@@ -233,11 +226,6 @@ public class RegistryConfig extends AbstractConfig {
                 updatePropertyIfAbsent(this::getProtocol, this::setProtocol, url.getProtocol());
                 updatePropertyIfAbsent(this::getPort, this::setPort, url.getPort());
 
-//                setUsername(url.getUsername());
-//                setPassword(url.getPassword());
-//                updateIdIfAbsent(url.getProtocol());
-//                updateProtocolIfAbsent(url.getProtocol());
-//                updatePortIfAbsent(url.getPort());
                 Map<String, String> params = url.getParameters();
                 if (CollectionUtils.isNotEmptyMap(params)) {
                     params.remove(BACKUP_KEY);
@@ -317,7 +305,7 @@ public class RegistryConfig extends AbstractConfig {
      * @deprecated
      */
     @Deprecated
-    @Parameter(excluded = true)
+    @Parameter(excluded = true, attribute = false)
     public String getTransport() {
         return getTransporter();
     }
@@ -337,7 +325,7 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     public void setTransporter(String transporter) {
-        /*if(transporter != null && transporter.length() > 0 && ! ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(transporter)){
+        /*if(transporter != null && transporter.length() > 0 && ! this.getExtensionLoader(Transporter.class).hasExtension(transporter)){
             throw new IllegalStateException("No such transporter type : " + transporter);
         }*/
         this.transporter = transporter;
@@ -348,7 +336,7 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     public void setServer(String server) {
-        /*if(server != null && server.length() > 0 && ! ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(server)){
+        /*if(server != null && server.length() > 0 && ! this.getExtensionLoader(Transporter.class).hasExtension(server)){
             throw new IllegalStateException("No such server type : " + server);
         }*/
         this.server = server;
@@ -359,7 +347,7 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     public void setClient(String client) {
-        /*if(client != null && client.length() > 0 && ! ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(client)){
+        /*if(client != null && client.length() > 0 && ! this.getExtensionLoader(Transporter.class).hasExtension(client)){
             throw new IllegalStateException("No such client type : " + client);
         }*/
         this.client = client;
@@ -456,14 +444,6 @@ public class RegistryConfig extends AbstractConfig {
         }
     }
 
-    public Boolean isDefault() {
-        return isDefault;
-    }
-
-    public void setDefault(Boolean isDefault) {
-        this.isDefault = isDefault;
-    }
-
     public Boolean getSimplified() {
         return simplified;
     }
@@ -542,18 +522,9 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     @Override
-    public void refresh() {
-        super.refresh();
-        if (StringUtils.isNotEmpty(this.getId())) {
-            this.setPrefix(REGISTRIES_SUFFIX);
-            super.refresh();
-        }
-    }
-
-    @Override
-    @Parameter(excluded = true)
+    @Parameter(excluded = true, attribute = false)
     public boolean isValid() {
         // empty protocol will default to 'dubbo'
-        return !StringUtils.isEmpty(address);
+        return !StringUtils.isEmpty(address) || !StringUtils.isEmpty(protocol);
     }
 }

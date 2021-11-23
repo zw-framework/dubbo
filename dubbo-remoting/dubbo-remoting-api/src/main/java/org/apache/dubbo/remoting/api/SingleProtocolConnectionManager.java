@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 
 public class SingleProtocolConnectionManager implements ConnectionManager {
+    public static final String NAME = "single";
+
     private final ConcurrentMap<String, Connection> connections = PlatformDependent.newConcurrentHashMap();
 
     @Override
@@ -35,7 +37,7 @@ public class SingleProtocolConnectionManager implements ConnectionManager {
         return connections.compute(url.getAddress(), (address, conn) -> {
             if (conn == null) {
                 final Connection created = new Connection(url);
-                created.getCloseFuture().addListener(future -> connections.remove(address, created));
+                created.getClosePromise().addListener(future -> connections.remove(address, created));
                 return created;
             } else {
                 conn.retain();

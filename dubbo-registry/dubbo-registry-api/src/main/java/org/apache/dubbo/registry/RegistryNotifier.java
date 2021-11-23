@@ -16,30 +16,42 @@
  */
 package org.apache.dubbo.registry;
 
-import org.apache.dubbo.common.extension.ExtensionLoader;
+import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.threadpool.manager.ExecutorRepository;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_DELAY_EXECUTE_TIMES;
 
 public abstract class RegistryNotifier {
 
+    private static final Logger logger = LoggerFactory.getLogger(RegistryNotifier.class);
     private volatile long lastExecuteTime;
     private volatile long lastEventTime;
 
     private Object rawAddresses;
     private long delayTime;
 
+    // should delay notify or not
+    private final AtomicBoolean shouldDelay = new AtomicBoolean(false);
+    // for the first 10 notification will be notified immediately
+    private final AtomicInteger executeTime = new AtomicInteger(0);
+
     private ScheduledExecutorService scheduler;
 
-    public RegistryNotifier(long delayTime) {
-        this(delayTime, null);
+    public RegistryNotifier(URL registryUrl, long delayTime) {
+        this(registryUrl, delayTime, null);
     }
 
-    public RegistryNotifier(long delayTime, ScheduledExecutorService scheduler) {
+    public RegistryNotifier(URL registryUrl, long delayTime, ScheduledExecutorService scheduler) {
         this.delayTime = delayTime;
         if (scheduler == null) {
-            this.scheduler = ExtensionLoader.getExtensionLoader(ExecutorRepository.class)
+            this.scheduler = registryUrl.getOrDefaultApplicationModel().getExtensionLoader(ExecutorRepository.class)
                     .getDefaultExtension().getRegistryNotificationExecutor();
         } else {
             this.scheduler = scheduler;
@@ -52,10 +64,17 @@ public abstract class RegistryNotifier {
         this.lastEventTime = notifyTime;
 
         long delta = (System.currentTimeMillis() - lastExecuteTime) - delayTime;
-        if (delta >= 0) {
-            scheduler.submit(new NotificationTask(this, notifyTime));
-        } else {
+
+        // more than 10 calls && next execute time is in the future
+        boolean delay = shouldDelay.get() && delta < 0;
+        if (delay) {
             scheduler.schedule(new NotificationTask(this, notifyTime), -delta, TimeUnit.MILLISECONDS);
+        } else {
+            // check if more than 10 calls
+            if (!shouldDelay.get() && executeTime.incrementAndGet() > DEFAULT_DELAY_EXECUTE_TIMES) {
+                shouldDelay.set(true);
+            }
+            scheduler.submit(new NotificationTask(this, notifyTime));
         }
     }
 
@@ -76,14 +95,18 @@ public abstract class RegistryNotifier {
 
         @Override
         public void run() {
-            if (this.time == listener.lastEventTime) {
-                listener.doNotify(listener.rawAddresses);
-                listener.lastExecuteTime = System.currentTimeMillis();
-                synchronized (listener) {
-                    if (this.time == listener.lastEventTime) {
-                        listener.rawAddresses = null;
+            try {
+                if (this.time == listener.lastEventTime) {
+                    listener.doNotify(listener.rawAddresses);
+                    listener.lastExecuteTime = System.currentTimeMillis();
+                    synchronized (listener) {
+                        if (this.time == listener.lastEventTime) {
+                            listener.rawAddresses = null;
+                        }
                     }
                 }
+            } catch (Throwable t) {
+                logger.error("Error occurred when notify directory. ", t);
             }
         }
     }

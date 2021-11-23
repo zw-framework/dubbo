@@ -33,6 +33,8 @@ import org.apache.dubbo.registry.client.event.listener.ServiceInstancesChangedLi
 import org.apache.dubbo.registry.client.metadata.MetadataUtils;
 import org.apache.dubbo.rpc.RpcException;
 import org.apache.dubbo.rpc.model.ApplicationModel;
+import org.apache.dubbo.rpc.model.ScopeModelAware;
+import org.apache.dubbo.rpc.model.ScopeModelUtil;
 
 import com.alibaba.fastjson.JSONObject;
 
@@ -47,7 +49,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery {
+public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery, ScopeModelAware {
+
+    private volatile boolean isDestroy;
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -94,6 +98,15 @@ public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery {
      * Value - a revision calculate from {@link List} of {@link ServiceInstance}
      */
     private final ConcurrentHashMap<String, String> serviceInstanceRevisionMap = new ConcurrentHashMap<>();
+    private ApplicationModel applicationModel;
+    private WritableMetadataService metadataService;
+
+    @Override
+    public void setApplicationModel(ApplicationModel applicationModel) {
+        this.applicationModel = applicationModel;
+        metadataService = WritableMetadataService.getDefaultExtension(applicationModel);
+
+    }
 
     @Override
     public void initialize(URL registryURL) throws Exception {
@@ -104,7 +117,6 @@ public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery {
         // Echo check: test if consumer is offline, remove MetadataChangeListener,
         // reduce the probability of failure when metadata update
         echoCheckExecutor.scheduleAtFixedRate(() -> {
-            WritableMetadataService metadataService = WritableMetadataService.getDefaultExtension();
             Map<String, InstanceMetadataChangedListener> listenerMap = metadataService.getInstanceMetadataChangedListenerMap();
             Iterator<Map.Entry<String, InstanceMetadataChangedListener>> iterator = listenerMap.entrySet().iterator();
 
@@ -124,20 +136,24 @@ public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery {
 
     @Override
     public void destroy() throws Exception {
+        isDestroy = true;
         doDestroy();
         metadataMap.clear();
         serviceInstanceRevisionMap.clear();
         echoCheckExecutor.shutdown();
     }
 
+    @Override
+    public boolean isDestroy() {
+        return isDestroy;
+    }
+
     private void updateMetadata(ServiceInstance serviceInstance) {
-        WritableMetadataService metadataService = WritableMetadataService.getDefaultExtension();
         String metadataString = JSONObject.toJSONString(serviceInstance.getMetadata());
         String metadataRevision = RevisionResolver.calRevision(metadataString);
 
         // check if metadata updated
         if (!metadataRevision.equalsIgnoreCase(lastMetadataRevision)) {
-            logger.info("Update Service Instance Metadata of DNS registry. Newer metadata: " + metadataString);
             if (logger.isDebugEnabled()) {
                 logger.debug("Update Service Instance Metadata of DNS registry. Newer metadata: " + metadataString);
             }
@@ -189,7 +205,6 @@ public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery {
         this.serviceInstance = null;
 
         // notify empty message to consumer
-        WritableMetadataService metadataService = WritableMetadataService.getDefaultExtension();
         metadataService.exportInstanceMetadata("");
         metadataService.getInstanceMetadataChangedListenerMap().forEach((consumerId, listener) -> listener.onEvent(""));
         metadataService.getInstanceMetadataChangedListenerMap().clear();
@@ -207,7 +222,7 @@ public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery {
 
     @SuppressWarnings("unchecked")
     public final void fillServiceInstance(DefaultServiceInstance serviceInstance) {
-        String hostId = serviceInstance.getId();
+        String hostId = serviceInstance.getAddress();
         if (metadataMap.containsKey(hostId)) {
             // Use cached metadata.
             // Metadata will be updated by provider callback
@@ -216,12 +231,14 @@ public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery {
             serviceInstance.setMetadata(JSONObject.parseObject(metadataString, Map.class));
         } else {
             // refer from MetadataUtils, this proxy is different from the one used to refer exportedURL
-            MetadataService metadataService = MetadataUtils.getMetadataServiceProxy(serviceInstance, this);
+            MetadataService metadataService = MetadataUtils.getMetadataServiceProxy(serviceInstance);
 
-            String consumerId = ApplicationModel.getName() + NetUtils.getLocalHost();
+            String consumerId = ScopeModelUtil.getApplicationModel(registryURL.getScopeModel()).getApplicationName() + NetUtils.getLocalHost();
             String metadata = metadataService.getAndListenInstanceMetadata(
                     consumerId, metadataString -> {
-                        logger.info("Receive callback: " + metadataString + serviceInstance);
+                        if(logger.isDebugEnabled()) {
+                            logger.debug("Receive callback: " + metadataString + serviceInstance);
+                        }
                         if (StringUtils.isEmpty(metadataString)) {
                             // provider is shutdown
                             metadataMap.remove(hostId);
@@ -255,7 +272,7 @@ public abstract class SelfHostMetaServiceDiscovery implements ServiceDiscovery {
             allServiceInstances.removeAll(oldServiceInstances);
 
             allServiceInstances.forEach(removedServiceInstance -> {
-                MetadataUtils.destroyMetadataServiceProxy(removedServiceInstance, this);
+                MetadataUtils.destroyMetadataServiceProxy(removedServiceInstance);
             });
 
             cachedServiceInstances.put(serviceName, instances);

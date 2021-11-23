@@ -16,8 +16,6 @@
  */
 package org.apache.dubbo.metadata.definition.util;
 
-import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -52,7 +50,7 @@ public final class ClassUtils {
             return null;
         }
 
-        String path = codeSource.getLocation().toExternalForm();
+        String path = location.toExternalForm();
 
         if (path.endsWith(".jar") && path.contains("/")) {
             return path.substring(path.lastIndexOf('/') + 1);
@@ -120,12 +118,12 @@ public final class ClassUtils {
             if (ownerType instanceof Class) {
                 sb.append(((Class) ownerType).getName());
             } else {
-                sb.append(ownerType.toString());
+                sb.append(ownerType);
             }
 
-            sb.append(".");
+            sb.append('.');
 
-            if (ownerType instanceof ParameterizedTypeImpl) {
+            if (ownerType instanceof ParameterizedType) {
                 // Find simple name of nested type by removing the
                 // shared prefix with owner.
                 sb.append(rawType.getName().replace(((Class) ((ParameterizedType) ownerType).getRawType()).getName() + "$",
@@ -139,7 +137,7 @@ public final class ClassUtils {
 
         if (actualTypeArguments != null &&
                 actualTypeArguments.length > 0) {
-            sb.append("<");
+            sb.append('<');
             boolean first = true;
             for (Type t : actualTypeArguments) {
                 if (!first) {
@@ -155,7 +153,7 @@ public final class ClassUtils {
                 }
                 first = false;
             }
-            sb.append(">");
+            sb.append('>');
         }
 
         return sb.toString();

@@ -16,20 +16,54 @@
  */
 package org.apache.dubbo.rpc.protocol.tri;
 
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http2.Http2Headers;
+import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.LoggerFactory;
+import org.apache.dubbo.common.stream.StreamObserver;
 
-import java.io.InputStream;
-
+/**
+ * Stream acts as a bi-directional intermediate layer for processing streaming data . It serializes object instance to
+ * byte[] then send to remote, and deserializes byte[] to object instance from remote. {@link #inboundTransportObserver()}
+ * and {@link #subscribe(OutboundTransportObserver)} provide {@link TransportObserver} to receive or send remote data.
+ * {@link #inboundMessageObserver()} and {@link #subscribe(StreamObserver)} provide {@link StreamObserver}
+ * as API for users fetching/emitting objects from/to remote peer.
+ */
 public interface Stream {
 
-    void onHeaders(Http2Headers headers);
+    Logger LOGGER = LoggerFactory.getLogger(Stream.class);
 
-    void onData(InputStream in);
+    /**
+     * Register an upstream data observer to receive byte[] sent by this stream
+     *
+     * @param observer receives remote byte[] data
+     */
+    void subscribe(OutboundTransportObserver observer);
 
-    void onError(GrpcStatus status);
+    /**
+     * Get a downstream data observer for writing byte[] data to this stream
+     *
+     * @return an observer for writing byte[] to remote peer
+     */
+    TransportObserver inboundTransportObserver();
 
-    void write(Object obj, ChannelPromise promise) throws Exception;
+    /**
+     * Register an upstream data observer to receive instance sent by this stream
+     *
+     * @param outboundMessageObserver receives remote byte[] data
+     */
+    void subscribe(StreamObserver<Object> outboundMessageObserver);
 
-    void halfClose() throws Exception;
+    /**
+     * Get a downstream data observer for transmitting instances to application code
+     *
+     * @return an observer for writing byte[] to remote peer
+     */
+    StreamObserver<Object> inboundMessageObserver();
+
+    /**
+     * Execute a task in stream's executor
+     *
+     * @param runnable task to run
+     */
+    void execute(Runnable runnable);
+
 }

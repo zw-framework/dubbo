@@ -45,6 +45,9 @@ public class PathURLAddress extends URLAddress {
         while (path != null && path.startsWith("/")) {
             path = path.substring(1);
         }
+        if (path != null) {
+            path = path.intern();
+        }
         this.path = path;
     }
 
@@ -159,13 +162,13 @@ public class PathURLAddress extends URLAddress {
         if (StringUtils.isNotEmpty(host)) {
             buf.append(host);
             if (port > 0) {
-                buf.append(":");
+                buf.append(':');
                 buf.append(port);
             }
         }
 
         if (StringUtils.isNotEmpty(path)) {
-            buf.append("/");
+            buf.append('/');
             buf.append(path);
         }
 

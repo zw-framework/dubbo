@@ -17,12 +17,12 @@
 package org.apache.dubbo.common.url.component;
 
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.utils.CollectionUtils;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class ServiceConfigURL extends URL {
-    private final Map<String, Object> attributes;
 
     private volatile transient String full;
     private volatile transient String string;
@@ -30,12 +30,44 @@ public class ServiceConfigURL extends URL {
     private volatile transient String parameter;
 
     public ServiceConfigURL() {
-        this.attributes = null;
+        super();
     }
 
     public ServiceConfigURL(URLAddress urlAddress, URLParam urlParam, Map<String, Object> attributes) {
-        super(urlAddress, urlParam);
-        this.attributes = (attributes != null ? attributes : new HashMap<>());
+        super(urlAddress, urlParam, attributes);
+    }
+
+
+    public ServiceConfigURL(String protocol, String host, int port) {
+        this(protocol, null, null, host, port, null, (Map<String, String>) null);
+    }
+
+    public ServiceConfigURL(String protocol, String host, int port, String[] pairs) { // varargs ... conflict with the following path argument, use array instead.
+        this(protocol, null, null, host, port, null, CollectionUtils.toStringMap(pairs));
+    }
+
+    public ServiceConfigURL(String protocol, String host, int port, Map<String, String> parameters) {
+        this(protocol, null, null, host, port, null, parameters);
+    }
+
+    public ServiceConfigURL(String protocol, String host, int port, String path) {
+        this(protocol, null, null, host, port, path, (Map<String, String>) null);
+    }
+
+    public ServiceConfigURL(String protocol, String host, int port, String path, String... pairs) {
+        this(protocol, null, null, host, port, path, CollectionUtils.toStringMap(pairs));
+    }
+
+    public ServiceConfigURL(String protocol, String host, int port, String path, Map<String, String> parameters) {
+        this(protocol, null, null, host, port, path, parameters);
+    }
+
+    public ServiceConfigURL(String protocol, String username, String password, String host, int port, String path) {
+        this(protocol, username, password, host, port, path, (Map<String, String>) null);
+    }
+
+    public ServiceConfigURL(String protocol, String username, String password, String host, int port, String path, String... pairs) {
+        this(protocol, username, password, host, port, path, CollectionUtils.toStringMap(pairs));
     }
 
     public ServiceConfigURL(String protocol,
@@ -45,7 +77,7 @@ public class ServiceConfigURL extends URL {
                int port,
                String path,
                Map<String, String> parameters) {
-        this(new PathURLAddress(protocol, username, password, path, host, port), new URLParam(parameters), null);
+        this(new PathURLAddress(protocol, username, password, path, host, port), URLParam.parse(parameters), null);
     }
 
     public ServiceConfigURL(String protocol,
@@ -56,48 +88,42 @@ public class ServiceConfigURL extends URL {
                             String path,
                             Map<String, String> parameters,
                             Map<String, Object> attributes) {
-        this(new PathURLAddress(protocol, username, password, path, host, port), new URLParam(parameters), attributes);
+        this(new PathURLAddress(protocol, username, password, path, host, port), URLParam.parse(parameters), attributes);
     }
 
+    @Override
     protected <T extends URL> T newURL(URLAddress urlAddress, URLParam urlParam) {
         return (T) new ServiceConfigURL(urlAddress, urlParam, attributes);
-    }
-
-    public Map<String, Object> getAttributes() {
-        return attributes;
-    }
-
-    public Object getAttribute(String key) {
-        return attributes.get(key);
     }
 
     @Override
     public URL addAttributes(Map<String, Object> attributes) {
         Map<String, Object> newAttributes = new HashMap<>();
-        newAttributes.putAll(this.attributes);
+        if (this.attributes != null) {
+            newAttributes.putAll(this.attributes);
+        }
         newAttributes.putAll(attributes);
-
         return new ServiceConfigURL(getUrlAddress(), getUrlParam(), newAttributes);
     }
 
+    @Override
     public ServiceConfigURL putAttribute(String key, Object obj) {
-        Map<String, Object> newAttributes = new HashMap<>(attributes);
+        Map<String, Object> newAttributes = new HashMap<>();
+        if (attributes != null) {
+            newAttributes.putAll(attributes);
+        }
         newAttributes.put(key, obj);
-
         return new ServiceConfigURL(getUrlAddress(), getUrlParam(), newAttributes);
     }
 
     @Override
     public URL removeAttribute(String key) {
-        Map<String, Object> newAttributes = new HashMap<>(attributes);
+        Map<String, Object> newAttributes = new HashMap<>();
+        if (attributes != null) {
+            newAttributes.putAll(attributes);
+        }
         newAttributes.remove(key);
-
         return new ServiceConfigURL(getUrlAddress(), getUrlParam(), newAttributes);
-    }
-
-    @Override
-    public boolean hasAttribute(String key) {
-        return getAttribute(key) != null;
     }
 
     @Override

@@ -33,6 +33,15 @@
         <module>dubbo-metadata-processor</module>
         <module>dubbo-metadata-report-zookeeper</module>
         <module>dubbo-metadata-report-redis</module>
+        <module>dubbo-metadata-report-nacos</module>
     </modules>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-test-check</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

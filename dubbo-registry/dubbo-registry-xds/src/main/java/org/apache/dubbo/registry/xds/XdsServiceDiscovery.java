@@ -17,12 +17,15 @@
 package org.apache.dubbo.registry.xds;
 
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.registry.client.DefaultServiceInstance;
 import org.apache.dubbo.registry.client.SelfHostMetaServiceDiscovery;
 import org.apache.dubbo.registry.client.ServiceInstance;
 import org.apache.dubbo.registry.client.event.listener.ServiceInstancesChangedListener;
 import org.apache.dubbo.registry.xds.util.PilotExchanger;
 import org.apache.dubbo.registry.xds.util.protocol.message.Endpoint;
+import org.apache.dubbo.rpc.model.ScopeModelUtil;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -32,11 +35,15 @@ import java.util.Set;
 
 public class XdsServiceDiscovery extends SelfHostMetaServiceDiscovery {
     private PilotExchanger exchanger;
-    private URL registryURL;
+    private static final Logger logger = LoggerFactory.getLogger(XdsServiceDiscovery.class);
 
     @Override
     public void doInitialize(URL registryURL) throws Exception {
-        exchanger = PilotExchanger.initialize(registryURL);
+        try {
+            exchanger = PilotExchanger.initialize(registryURL);
+        } catch (Throwable t) {
+            logger.error(t);
+        }
     }
 
     @Override
@@ -67,10 +74,14 @@ public class XdsServiceDiscovery extends SelfHostMetaServiceDiscovery {
     private List<ServiceInstance> changedToInstances(String serviceName, Collection<Endpoint> endpoints) {
         List<ServiceInstance> instances = new LinkedList<>();
         endpoints.forEach(endpoint -> {
-            DefaultServiceInstance serviceInstance = new DefaultServiceInstance(serviceName, endpoint.getAddress(), endpoint.getPortValue());
-            // fill metadata by SelfHostMetaServiceDiscovery, will be fetched by RPC request
-            fillServiceInstance(serviceInstance);
-            instances.add(serviceInstance);
+            try {
+                DefaultServiceInstance serviceInstance = new DefaultServiceInstance(serviceName, endpoint.getAddress(), endpoint.getPortValue(), ScopeModelUtil.getApplicationModel(getUrl().getScopeModel()));
+                // fill metadata by SelfHostMetaServiceDiscovery, will be fetched by RPC request
+                fillServiceInstance(serviceInstance);
+                instances.add(serviceInstance);
+            } catch (Throwable t) {
+                logger.error("Error occurred when parsing endpoints. Endpoints List:" + endpoints,t);
+            }
         });
         instances.sort(Comparator.comparingInt(ServiceInstance::hashCode));
         return instances;

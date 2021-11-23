@@ -21,6 +21,7 @@ import org.apache.dubbo.metadata.definition.model.FullServiceDefinition;
 import org.apache.dubbo.metadata.definition.model.MethodDefinition;
 import org.apache.dubbo.metadata.definition.model.TypeDefinition;
 import org.apache.dubbo.metadata.definition.protobuf.model.ServiceInterface;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

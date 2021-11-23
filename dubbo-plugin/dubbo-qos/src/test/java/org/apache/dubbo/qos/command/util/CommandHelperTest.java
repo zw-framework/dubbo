@@ -17,7 +17,10 @@
 package org.apache.dubbo.qos.command.util;
 
 import org.apache.dubbo.qos.command.GreetingCommand;
+import org.apache.dubbo.qos.command.impl.ChangeTelnet;
+import org.apache.dubbo.qos.command.impl.CountTelnet;
 import org.apache.dubbo.qos.command.impl.Help;
+import org.apache.dubbo.qos.command.impl.InvokeTelnet;
 import org.apache.dubbo.qos.command.impl.Live;
 import org.apache.dubbo.qos.command.impl.Ls;
 import org.apache.dubbo.qos.command.impl.Offline;
@@ -26,12 +29,16 @@ import org.apache.dubbo.qos.command.impl.OfflineInterface;
 import org.apache.dubbo.qos.command.impl.Online;
 import org.apache.dubbo.qos.command.impl.OnlineApp;
 import org.apache.dubbo.qos.command.impl.OnlineInterface;
+import org.apache.dubbo.qos.command.impl.PortTelnet;
 import org.apache.dubbo.qos.command.impl.PublishMetadata;
+import org.apache.dubbo.qos.command.impl.PwdTelnet;
 import org.apache.dubbo.qos.command.impl.Quit;
 import org.apache.dubbo.qos.command.impl.Ready;
+import org.apache.dubbo.qos.command.impl.SelectTelnet;
+import org.apache.dubbo.qos.command.impl.ShutdownTelnet;
 import org.apache.dubbo.qos.command.impl.Startup;
 import org.apache.dubbo.qos.command.impl.Version;
-
+import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedList;
@@ -45,15 +52,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CommandHelperTest {
+    private CommandHelper commandHelper = new CommandHelper(FrameworkModel.defaultModel());
+
     @Test
     public void testHasCommand() throws Exception {
-        assertTrue(CommandHelper.hasCommand("greeting"));
-        assertFalse(CommandHelper.hasCommand("not-exiting"));
+        assertTrue(commandHelper.hasCommand("greeting"));
+        assertFalse(commandHelper.hasCommand("not-exiting"));
     }
 
     @Test
     public void testGetAllCommandClass() throws Exception {
-        List<Class<?>> classes = CommandHelper.getAllCommandClass();
+        List<Class<?>> classes = commandHelper.getAllCommandClass();
 
         // update this list when introduce a new command
         List<Class<?>> expectedClasses = new LinkedList<>();
@@ -72,12 +81,19 @@ public class CommandHelperTest {
         expectedClasses.add(Ready.class);
         expectedClasses.add(Startup.class);
         expectedClasses.add(Version.class);
+        expectedClasses.add(ChangeTelnet.class);
+        expectedClasses.add(CountTelnet.class);
+        expectedClasses.add(InvokeTelnet.class);
+        expectedClasses.add(SelectTelnet.class);
+        expectedClasses.add(PortTelnet.class);
+        expectedClasses.add(PwdTelnet.class);
+        expectedClasses.add(ShutdownTelnet.class);
         assertThat(classes, containsInAnyOrder(expectedClasses.toArray(new Class<?>[0])));
     }
 
     @Test
     public void testGetCommandClass() throws Exception {
-        assertThat(CommandHelper.getCommandClass("greeting"), equalTo(GreetingCommand.class));
-        assertNull(CommandHelper.getCommandClass("not-exiting"));
+        assertThat(commandHelper.getCommandClass("greeting"), equalTo(GreetingCommand.class));
+        assertNull(commandHelper.getCommandClass("not-exiting"));
     }
 }

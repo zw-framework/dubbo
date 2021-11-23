@@ -16,6 +16,12 @@
  */
 package org.apache.dubbo.rpc.protocol.grpc;
 
+import io.grpc.BindableService;
+import io.grpc.CallOptions;
+import io.grpc.Channel;
+import io.grpc.ManagedChannel;
+import io.grpc.Server;
+import io.grpc.netty.NettyServerBuilder;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
@@ -23,17 +29,9 @@ import org.apache.dubbo.config.ReferenceConfigBase;
 import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.ProtocolServer;
 import org.apache.dubbo.rpc.RpcException;
-import org.apache.dubbo.rpc.model.ApplicationModel;
+import org.apache.dubbo.rpc.model.FrameworkServiceRepository;
 import org.apache.dubbo.rpc.model.ProviderModel;
-import org.apache.dubbo.rpc.model.ServiceRepository;
 import org.apache.dubbo.rpc.protocol.AbstractProxyProtocol;
-
-import io.grpc.BindableService;
-import io.grpc.CallOptions;
-import io.grpc.Channel;
-import io.grpc.ManagedChannel;
-import io.grpc.Server;
-import io.grpc.netty.NettyServerBuilder;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -72,7 +70,7 @@ public class GrpcProtocol extends AbstractProxyProtocol {
 
         GrpcRemotingServer grpcServer = (GrpcRemotingServer) protocolServer.getRemotingServer();
 
-        ServiceRepository serviceRepository = ApplicationModel.getServiceRepository();
+        FrameworkServiceRepository serviceRepository = frameworkModel.getServiceRepository();
         ProviderModel providerModel = serviceRepository.lookupExportedService(url.getServiceKey());
         if (providerModel == null) {
             throw new IllegalStateException("Service " + url.getServiceKey() + "should have already been stored in service repository, " +
@@ -119,11 +117,12 @@ public class GrpcProtocol extends AbstractProxyProtocol {
 
         // CallOptions
         try {
+            ReferenceConfigBase<?> referenceConfig = url.getServiceModel().getReferenceConfig();
             @SuppressWarnings("unchecked") final T stub = (T) dubboStubMethod.invoke(null,
                     channel,
                     GrpcOptionsUtils.buildCallOptions(url),
                     url,
-                    ApplicationModel.getConsumerModel(url.getServiceKey()).getReferenceConfig()
+                    referenceConfig
             );
             final Invoker<T> target = proxyFactory.getInvoker(stub, type, url);
             GrpcInvoker<T> grpcInvoker = new GrpcInvoker<>(type, url, target, channel);
@@ -190,6 +189,9 @@ public class GrpcProtocol extends AbstractProxyProtocol {
 
     @Override
     public void destroy() {
+        if (logger.isInfoEnabled()) {
+            logger.info("Destroying protocol [" + this.getClass().getSimpleName() + "] ...");
+        }
         serverMap.values().forEach(ProtocolServer::close);
         channelMap.values().forEach(ReferenceCountManagedChannel::shutdown);
         serverMap.clear();

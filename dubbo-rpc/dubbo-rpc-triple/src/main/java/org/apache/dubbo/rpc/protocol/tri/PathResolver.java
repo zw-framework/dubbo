@@ -17,10 +17,14 @@
 package org.apache.dubbo.rpc.protocol.tri;
 
 import org.apache.dubbo.common.constants.CommonConstants;
+import org.apache.dubbo.common.extension.ExtensionScope;
 import org.apache.dubbo.common.extension.SPI;
 import org.apache.dubbo.rpc.Invoker;
 
-@SPI(CommonConstants.TRIPLE)
+/**
+ * PathResolver maintains a mapping between request path and Invoker for multiple protocols.
+ */
+@SPI(value = CommonConstants.TRIPLE, scope = ExtensionScope.FRAMEWORK)
 public interface PathResolver {
 
     void add(String path, Invoker<?> invoker);
